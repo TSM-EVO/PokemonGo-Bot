@@ -29,18 +29,18 @@ class Stepper(object):
         position = (self.origin_lat,self.origin_lon,0.0)
         self.api.set_position(*position)
 
-        def step(self):
-            if -self.steplimit2 / 2 < self.x <= self.steplimit2 / 2 and -self.steplimit2 / 2 < self.y <= self.steplimit2 / 2:
-                position = (self.x * 0.0025 + self.origin_lat, self.y * 0.0025 + self.origin_lon, 0)
-                if self.config.walk > 0:
-                    self.api.walk(self.config.walk, *position,walking_hook=self.walking_hook)
-                else:
-                    self.api.set_position(*position)
-                print(position)
-            if self.x == self.y or self.x < 0 and self.x == -self.y or self.x > 0 and self.x == 1 - self.y:
-                (self.dx, self.dy) = (-self.dy, self.dx)
+    def step(self):
+        if -self.steplimit2 / 2 < self.x <= self.steplimit2 / 2 and -self.steplimit2 / 2 < self.y <= self.steplimit2 / 2:
+            position = (self.x * 0.0025 + self.origin_lat, self.y * 0.0025 + self.origin_lon, 0)
+            if self.config.walk > 0:
+                self.api.walk(self.config.walk, *position)
+            else:
+                self.api.set_position(*position)
+            print(position)
+        if self.x == self.y or self.x < 0 and self.x == -self.y or self.x > 0 and self.x == 1 - self.y:
+            (self.dx, self.dy) = (-self.dy, self.dx)
 
-            (self.x, self.y) = (self.x + self.dx, self.y + self.dy)
+        (self.x, self.y) = (self.x + self.dx, self.y + self.dy)
 
     def get_cells(self):
         timestamp = "\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000"
