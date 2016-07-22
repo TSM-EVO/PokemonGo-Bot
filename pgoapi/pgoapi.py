@@ -26,7 +26,6 @@ Author: tjado <https://github.com/tejado>
 import logging
 import re
 import requests
-import random
 
 from utilities import f2i, h2f, i2f
 
@@ -93,8 +92,7 @@ class PGoApi:
 
     def list_curr_methods(self):
         for i in self._req_method_list:
-            print ''
-            #print("{} ({})".format(RpcEnum.RequestMethod.Name(i),i))
+            print("{} ({})".format(RpcEnum.RequestMethod.Name(i),i))
 
     def set_logger(self, logger):
         self._ = logger or logging.getLogger(__name__)
@@ -116,30 +114,27 @@ class PGoApi:
         a = 0.5 - cos((lat2 - lat1) * p)/2 + cos(lat1 * p) * cos(lat2 * p) * (1 - cos((lon2 - lon1) * p)) / 2
         return 12742 * asin(sqrt(a)) * 1000
 
-    def walk(self, speed, lat, lng, alt,walking_hook):
+    def walk(self, speed, lat, lng, alt):
         dist = self.distance(i2f(self._position_lat), i2f(self._position_lng), lat, lng)
         steps = (dist+0.0)/(speed+0.0) # may be rational number
         intSteps = int(steps)
-        residuum = steps - intSteps
-        print '[#] Walking from ' + str((i2f(self._position_lat), i2f(self._position_lng))) + " to " + str(str((lat, lng))) + " for approx. " + str(ceil(steps)) + " seconds"
-
+        residuum = steps-intSteps
+        print "Walking from " + str((i2f(self._position_lat), i2f(self._position_lng))) + " to " + str(str((lat, lng))) + " for approx. " + str(ceil(steps)) + " seconds"
         if steps != 0:
             dLat = (lat - i2f(self._position_lat)) / steps
             dLng = (lng - i2f(self._position_lng)) / steps
 
             for i in range(intSteps):
-                self.set_position(i2f(self._position_lat) + dLat + self.random_lat_long(), i2f(self._position_lng) + dLng + self.random_lat_long(), alt)
+                self.set_position(i2f(self._position_lat) + dLat, i2f(self._position_lng) + dLng, alt)
                 self.heartbeat()
-                if walking_hook:
-                    walking_hook()
-                time.sleep(1 + self.random_sleep()) # sleep one second plus a random delta
+                time.sleep(1) # sleep one second
 
             self.set_position(lat, lng, alt)
             self.heartbeat()
-        print "[#] Finished walking to " + str(str((lat, lng)))
+        print "Finished walking"
 
     def set_position(self, lat, lng, alt):
-        #self.log.debug('Set Position - Lat: %s Long: %s Alt: %s', lat, lng, alt)
+        self.log.debug('Set Position - Lat: %s Long: %s Alt: %s', lat, lng, alt)
 
         self._position_lat = f2i(lat)
         self._position_lng = f2i(lng)
@@ -215,12 +210,3 @@ class PGoApi:
         self.log.info('Login process completed')
 
         return True
-
-    def random_lat_long(self):
-        # Return random value from [-.000025, .000025]. Since 364,000 feet is equivalent to one degree of latitude, this
-        # should be 364,000 * .000025 = 9.1. So it returns between [-9.1, 9.1]
-        return ((random.random() * 0.00001) - 0.000005) * 5
-
-    def random_sleep(self):
-        # Returns a random value from [-.2, .2]. Used to randomize sleep time.
-        return (random.random() * 0.4) * -.2

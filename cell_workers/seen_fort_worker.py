@@ -5,40 +5,57 @@ from pgoapi.utilities import f2i, h2f
 
 class SeenFortWorker(object):
 
-    def __init__(self, fort, bot):
+    def __init__(self, cell, fort, bot):
+        self.cell = cell
         self.fort = fort
+        self.bot = bot
         self.api = bot.api
         self.position = bot.position
         self.config = bot.config
         self.item_list = bot.item_list
         self.rest_time = 50
-    def walking_hook(own):
-        print('another walking_hook')
+
     def work(self):
         lat = self.fort['latitude']
         lng = self.fort['longitude']
         fortID = self.fort['id']
-        distance = SeenFortWorker.geocalc(self.position[0], self.position[1], lat, lng) * 1000
-
+        distance = self._geocalc(self.position[0], self.position[1], lat, lng) * 1000
         print('Found fort {} at distance {}m'.format(fortID, distance))
-        if distance > 10:
-            print('Need to move closer to Pokestop')
-            position = (lat, lng, 0.0)
-            if self.config.walk > 0:
-                self.api.walk(self.config.walk, *position,walking_hook=self.walking_hook)
-            else:
-                self.api.set_position(*position)
-            self.api.player_update(latitude=lat,longitude=lng)
-            response_dict = self.api.call()
-            print('Arrived at Pokestop')
-            time.sleep(1.2)
 
-        self.api.fort_details(fort_id=self.fort['id'], latitude=position[0], longitude=position[1])
+        distance_before_break = 50
+        breaks_amount = int(distance/distance_before_break)
+        print breaks_amount
+
+        # divides the distance into even pieces
+        for breaks in range(1, breaks_amount, 1):
+            t = breaks/float(breaks_amount)
+            print t
+            temp_lat = self.position[0] * (1-t) + lat * t
+            temp_lng = self.position[1] * (1-t) + lng * t
+            self.walk(temp_lat, temp_lng)
+            self.bot.catch_pokemon()
+
+        self.walk(lat, lng)
+        self.spin(lat, lng)
+
+    def walk(self, temp_lat, temp_lng):
+        position = (temp_lat, temp_lng, 0.0)
+        if self.config.walk > 0:
+            self.api.walk(self.config.walk, *position)
+        else:
+            self.api.set_position(*position)
+        self.api.player_update(latitude=temp_lat,longitude=temp_lng)
+        response_dict = self.api.call()
+
+    def spin(self, lat, lng):
+        self.api.fort_details(fort_id=self.fort['id'], latitude=lat, longitude=lng)
         response_dict = self.api.call()
         fort_details = response_dict['responses']['FORT_DETAILS']
         print('Now at Pokestop: ' + fort_details['name'] + ' - Spinning...')
         time.sleep(2)
-        self.api.fort_search(fort_id=self.fort['id'], fort_latitude=lat, fort_longitude=lng, player_latitude=f2i(position[0]), player_longitude=f2i(position[1]))
+        self.api.fort_search(
+            fort_id=self.fort['id'], fort_latitude=lat, fort_longitude=lng,
+            player_latitude=f2i(self.position[0]), player_longitude=f2i(self.position[1]))
         response_dict = self.api.call()
         if 'responses' in response_dict and \
             'FORT_SEARCH' in response_dict['responses']:
@@ -93,8 +110,7 @@ class SeenFortWorker(object):
         time.sleep(8)
         return 0
 
-    @staticmethod
-    def geocalc(lat1, lon1, lat2, lon2):
+    def _geocalc(self, lat1, lon1, lat2, lon2):
         lat1 = radians(lat1)
         lon1 = radians(lon1)
         lat2 = radians(lat2)
@@ -111,7 +127,3 @@ class SeenFortWorker(object):
         x = sin(lat1) * sin(lat2) + cos(lat1) * cos(lat2) * cos(dlon)
         c = atan2(y, x)
         return EARTH_R * c
-
-    @staticmethod
-    def closest_fort(current_lat, current_long, forts):
-        print x
